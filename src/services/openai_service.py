@@ -80,7 +80,7 @@ Analysis: {", ".join(indicators) if indicators else "none"}
 """
 
         try:
-            response = openai.chat.completions.create(
+            response = openai.ChatCompletion.create(
                 model="gpt-4-turbo-preview",
                 messages=[
                     {"role": "system", "content": prompt},
@@ -91,13 +91,13 @@ Analysis: {", ".join(indicators) if indicators else "none"}
                 presence_penalty=0.2,
                 frequency_penalty=0.3,
                 top_p=0.95,
-                stop=["\n", "。", ".", "！", "!"]
+                stop=["\n", ".", "！", "!"]
             )
             
             if not response.choices:
                 return None
                 
-            message = response.choices[0].message.content.strip()
+            message = response.choices[0].message['content'].strip()
             message = re.sub(r'[.!？。]+$', '', message).lower()
             
             return message if re.match(r'^[a-z]+(\([^)]+\))?!?: .+$', message) else None
