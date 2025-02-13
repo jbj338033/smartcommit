@@ -1,3 +1,4 @@
+# Python
 __pycache__/
 *.py[cod]
 *$py.class
@@ -10,6 +11,55 @@ ENV/
 dist/
 build/
 *.egg-info/
+
+# IDE
 .idea/
 .vscode/
+*.sublime-workspace
+*.sublime-project
+
+# OS
 .DS_Store
+Thumbs.db
+desktop.ini
+*.swp
+*~
+
+# Build outputs
+*.dmg
+*.exe
+*.msi
+*.app
+output/
+installer.spec
+installer.iss
+
+# Logging and temp files
+*.log
+logs/
+tmp/
+temp/
+.coverage
+htmlcov/
+.pytest_cache/
+.tox/
+.mypy_cache/
+
+# Virtual environment extras
+pip-log.txt
+pip-delete-this-directory.txt
+.python-version
+.env.local
+.env.*.local
+
+# Package specific
+node_modules/
+.npm/
+yarn-debug.log*
+yarn-error.log*
+
+# SmartCommit specific
+assets/*.icns
+assets/*.ico
+*.spec
+.smartcommit/
