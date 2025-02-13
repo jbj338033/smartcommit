@@ -1,136 +1,167 @@
-from PyQt6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QCheckBox, QLabel
-from PyQt6.QtCore import pyqtSignal, QTimer
+from PyQt6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QCheckBox, QLabel, QScrollArea
+from PyQt6.QtCore import pyqtSignal, QTimer, Qt
 from typing import List, Tuple
+from pathlib import Path
 
 class FileListWidget(QWidget):
-    files_selected = pyqtSignal(list)
+   files_selected = pyqtSignal(list)
 
-    def __init__(self):
-        super().__init__()
-        self.checkboxes = []
-        self.init_ui()
+   def __init__(self):
+       super().__init__()
+       self.checkboxes = []
+       self.init_ui()
 
-    def init_ui(self):
-        layout = QVBoxLayout(self)
-        
-        # 헤더
-        header = QHBoxLayout()
-        
-        # 새로고침 버튼 추가
-        self.refresh_btn = QPushButton("새로고침")
-        self.refresh_btn.setStyleSheet("""
-            QPushButton {
-                background-color: #4CAF50;
-                max-width: 80px;
-                padding: 5px;
-            }
-            QPushButton:hover {
-                background-color: #45a049;
-            }
-        """)
-        self.refresh_btn.clicked.connect(self.refresh_requested)
-        header.addWidget(self.refresh_btn)
-        
-        self.select_all_cb = QCheckBox("전체 선택")
-        self.select_all_cb.stateChanged.connect(self.toggle_all)
-        header.addWidget(self.select_all_cb)
-        
-        # 자동 새로고침 체크박스
-        self.auto_refresh_cb = QCheckBox("자동 새로고침")
-        self.auto_refresh_cb.setChecked(True)
-        self.auto_refresh_cb.stateChanged.connect(self.toggle_auto_refresh)
-        header.addWidget(self.auto_refresh_cb)
-        
-        header.addStretch()
-        layout.addLayout(header)
+   def init_ui(self):
+       main_layout = QVBoxLayout(self)
+       main_layout.setContentsMargins(0, 0, 0, 0)
+       main_layout.setSpacing(10)
 
-        # 파일 목록을 담을 레이아웃
-        self.files_layout = QVBoxLayout()
-        layout.addLayout(self.files_layout)
-        layout.addStretch()
+       header = QHBoxLayout()
+       header.setContentsMargins(10, 10, 10, 0)
 
-        # 자동 새로고침 타이머 설정
-        self.refresh_timer = QTimer(self)
-        self.refresh_timer.timeout.connect(self.refresh_requested)
-        self.refresh_timer.start(3000)  # 3초마다 새로고침
+       self.refresh_btn = QPushButton("새로고침")
+       self.refresh_btn.setStyleSheet("""
+           QPushButton {
+               background-color: #4CAF50;
+               color: white;
+               border: none;
+               padding: 8px 15px;
+               border-radius: 4px;
+               font-weight: bold;
+           }
+           QPushButton:hover {
+               background-color: #388E3C;
+           }
+       """)
+       self.refresh_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+       self.refresh_btn.clicked.connect(self.refresh_requested)
+       header.addWidget(self.refresh_btn)
 
-    def refresh_requested(self):
-        """새로고침 요청 시그널 발생"""
-        if hasattr(self.parent(), 'update_file_list'):
-            self.parent().update_file_list()
+       self.select_all_cb = QCheckBox("전체 선택")
+       self.select_all_cb.setStyleSheet("QCheckBox { padding: 5px; }")
+       self.select_all_cb.stateChanged.connect(self.toggle_all)
+       header.addWidget(self.select_all_cb)
 
-    def toggle_auto_refresh(self, state):
-        """자동 새로고침 토글"""
-        if state:
-            self.refresh_timer.start(3000)
-        else:
-            self.refresh_timer.stop()
+       self.auto_refresh_cb = QCheckBox("자동 새로고침")
+       self.auto_refresh_cb.setStyleSheet("QCheckBox { padding: 5px; }")
+       self.auto_refresh_cb.setChecked(True)
+       self.auto_refresh_cb.stateChanged.connect(self.toggle_auto_refresh)
+       header.addWidget(self.auto_refresh_cb)
+       
+       header.addStretch()
+       main_layout.addLayout(header)
 
-    def set_files(self, files: List[Tuple[str, str, str]]):
-        # 현재 선택된 파일들 저장
-        selected_files = self.get_selected_files()
-        
-        # 기존 체크박스들 제거
-        for cb in self.checkboxes:
-            cb.deleteLater()
-        self.checkboxes.clear()
-        
-        # 레이아웃의 모든 아이템 제거
-        while self.files_layout.count():
-            item = self.files_layout.takeAt(0)
-            if item.widget():
-                item.widget().deleteLater()
-            elif item.layout():
-                while item.layout().count():
-                    child = item.layout().takeAt(0)
-                    if child.widget():
-                        child.widget().deleteLater()
+       scroll_area = QScrollArea()
+       scroll_area.setWidgetResizable(True)
+       scroll_area.setStyleSheet("""
+           QScrollArea {
+               border: 1px solid #ddd;
+               border-radius: 4px;
+               background: white;
+           }
+       """)
 
-        # 새로운 파일 목록 추가
-        for file_path, status, change_type in files:
-            cb = QCheckBox(file_path)
-            # 이전에 선택되었던 파일이면 선택 상태 유지
-            if file_path in selected_files:
-                cb.setChecked(True)
-                
-            status_label = QLabel(f"({status})")
-            if status == 'deleted':
-                status_label.setStyleSheet("color: #dc3545;")  # 빨간색
-            elif status == 'modified':
-                status_label.setStyleSheet("color: #ffc107;")  # 노란색
-            else:
-                status_label.setStyleSheet("color: #28a745;")  # 초록색
-            
-            # change_type을 데이터로 저장
-            cb.setProperty('change_type', change_type)
-            
-            file_layout = QHBoxLayout()
-            file_layout.addWidget(cb)
-            file_layout.addWidget(status_label)
-            file_layout.addStretch()
-            
-            self.files_layout.addLayout(file_layout)
-            self.checkboxes.append(cb)
-            cb.stateChanged.connect(self.update_selected_files)
-            
-    def toggle_all(self, state):
-        for cb in self.checkboxes:
-            cb.setChecked(state)
+       scroll_content = QWidget()
+       self.files_layout = QVBoxLayout(scroll_content)
+       self.files_layout.setSpacing(5)
+       self.files_layout.setContentsMargins(10, 10, 10, 10)
+       self.files_layout.addStretch()
+       
+       scroll_area.setWidget(scroll_content)
+       main_layout.addWidget(scroll_area)
 
-    def update_selected_files(self):
-        selected = [cb.text() for cb in self.checkboxes if cb.isChecked()]
-        self.files_selected.emit(selected)
-        self.update_select_all_state()
+       self.refresh_timer = QTimer(self)
+       self.refresh_timer.timeout.connect(self.refresh_requested)
+       self.refresh_timer.start(3000)
 
-    def update_select_all_state(self):
-        """전체 선택 체크박스 상태 업데이트"""
-        if not self.checkboxes:
-            self.select_all_cb.setChecked(False)
-        else:
-            checked = sum(1 for cb in self.checkboxes if cb.isChecked())
-            self.select_all_cb.setChecked(checked == len(self.checkboxes))
+   def refresh_requested(self):
+       if hasattr(self.parent(), 'update_file_list'):
+           self.parent().update_file_list()
 
-    def get_selected_files(self) -> List[Tuple[str, str]]:
-        """선택된 파일과 change_type 반환"""
-        return [(cb.text(), cb.property('change_type')) 
-                for cb in self.checkboxes if cb.isChecked()]
+   def toggle_auto_refresh(self, state):
+       if state:
+           self.refresh_timer.start(3000)
+       else:
+           self.refresh_timer.stop()
+
+   def set_files(self, files: List[Tuple[str, str, str]]):
+       selected_files = self.get_selected_files()
+       
+       for cb in self.checkboxes:
+           cb.deleteLater()
+       self.checkboxes.clear()
+       
+       while self.files_layout.count():
+           item = self.files_layout.takeAt(0)
+           if item.widget():
+               item.widget().deleteLater()
+           elif item.layout():
+               while item.layout().count():
+                   child = item.layout().takeAt(0)
+                   if child.widget():
+                       child.widget().deleteLater()
+
+       for file_path, status, change_type in sorted(files, key=lambda x: x[0].lower()):
+           file_widget = QWidget()
+           file_widget.setStyleSheet("""
+               QWidget {
+                   border-radius: 4px;
+                   padding: 5px;
+               }
+               QWidget:hover {
+                   background-color: #f5f5f5;
+               }
+           """)
+           
+           file_layout = QHBoxLayout(file_widget)
+           file_layout.setContentsMargins(5, 5, 5, 5)
+           
+           cb = QCheckBox(str(Path(file_path).name))
+           cb.setProperty('full_path', file_path)
+           cb.setProperty('change_type', change_type)
+           
+           if file_path in [f[0] for f in selected_files]:
+               cb.setChecked(True)
+
+           status_colors = {
+               'deleted': ('#dc3545', '삭제됨'),
+               'modified': ('#ffc107', '수정됨'),
+               'renamed': ('#17a2b8', '이름변경'),
+               'untracked': ('#28a745', '새파일')
+           }
+           color, status_text = status_colors.get(status, ('#6c757d', status))
+           
+           file_layout.addWidget(cb)
+           file_layout.addWidget(QLabel(f"({status_text})"))
+           
+           path_label = QLabel(str(Path(file_path).parent))
+           path_label.setStyleSheet(f"color: {color}; font-size: 12px;")
+           file_layout.addWidget(path_label)
+           file_layout.addStretch()
+
+           self.files_layout.insertWidget(self.files_layout.count() - 1, file_widget)
+           self.checkboxes.append(cb)
+           cb.stateChanged.connect(self.update_selected_files)
+
+       self.update_select_all_state()
+
+   def toggle_all(self, state):
+       for cb in self.checkboxes:
+           cb.setChecked(state)
+
+   def update_selected_files(self):
+       selected = [(cb.property('full_path'), cb.property('change_type'))
+                  for cb in self.checkboxes if cb.isChecked()]
+       self.files_selected.emit(selected)
+       self.update_select_all_state()
+
+   def update_select_all_state(self):
+       if not self.checkboxes:
+           self.select_all_cb.setChecked(False)
+       else:
+           checked = sum(1 for cb in self.checkboxes if cb.isChecked())
+           self.select_all_cb.setChecked(checked == len(self.checkboxes))
+
+   def get_selected_files(self) -> List[Tuple[str, str]]:
+       return [(cb.property('full_path'), cb.property('change_type'))
+               for cb in self.checkboxes if cb.isChecked()]
